@@ -1,2 +1,1 @@
-# software-rendering
-Studies in software rendering
+# Software rendering studies

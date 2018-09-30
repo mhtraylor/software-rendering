@@ -31,8 +31,8 @@
 	"files.trimTrailingWhitespace": true,
 	"files.eol": "\n",
 	"files.exclude": {
-		"Makefile": true,
-		"build.sh": true,
+		// "Makefile": true,
+		// "build.sh": true,
 		"gmon.out": true,
 		"bin": true,
 		"build": true,
@@ -43,6 +43,7 @@
 		"**/Thumbs.db": true
 	},
 	"files.associations": {
+		"*.fs": "fsharp",
 		"*.stats": "cpp",
 		"array": "cpp",
 		"*.tcc": "cpp",
@@ -71,7 +72,8 @@
 		"tuple": "cpp",
 		"type_traits": "cpp",
 		"typeinfo": "cpp",
-		"utility": "cpp"
+		"utility": "cpp",
+		"vector": "cpp"
 	},
 
 	"C_Cpp.autocomplete": "Default",

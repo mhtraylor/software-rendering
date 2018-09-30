@@ -5,5 +5,6 @@
 #include <SFML/Audio.hpp>
 
 #include <iostream>
+#include <cmath>
 
 #endif // MAIN_HPP

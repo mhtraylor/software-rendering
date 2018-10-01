@@ -1,10 +1,10 @@
 #include "main.hpp"
 #include "model/model.hpp"
 
-const int FRAME_WIDTH   = 800;
-const int FRAME_HEIGHT  = 800;
+const int FRAME_WIDTH = 800;
+const int FRAME_HEIGHT = 800;
 
-Model * model = NULL;
+Model *model = NULL;
 
 void plot_line(int x0, int y0, int x1, int y1, sf::Color color, sf::Image &image)
 {
@@ -24,10 +24,10 @@ void plot_line(int x0, int y0, int x1, int y1, sf::Color color, sf::Image &image
 
     int dx = x1 - x0;
     int dy = y1 - y0;
-    int y  = y0;
+    int y = y0;
 
     float de = std::abs(dy / float(dx));
-    float e  = 0.f;
+    float e = 0.f;
 
     for (int x = x0; x <= x1; x++)
     {
@@ -49,6 +49,56 @@ void plot_line(int x0, int y0, int x1, int y1, sf::Color color, sf::Image &image
     }
 }
 
+sf::IntRect get_triangle_bounds(sf::Vector2i v0, sf::Vector2i v1, sf::Vector2i v2)
+{
+    int l = std::min(v0.x, std::min(v1.x, v2.x));
+    int t = std::min(v0.y, std::min(v1.y, v2.y));
+    int r = std::max(v0.x, std::max(v1.x, v2.x));
+    int b = std::max(v0.y, std::max(v1.y, v2.y));
+
+    return sf::IntRect(l, t, r + l, b + t);
+}
+
+sf::Vector3f cross(sf::Vector3f a, sf::Vector3f b)
+{
+    float x = (a.y * b.z) - (a.z * b.y);
+    float y = (a.z * b.x) - (a.x * b.z);
+    float z = (a.x * b.y) - (a.y * b.x);
+
+    return sf::Vector3f(x, y, z);
+}
+
+sf::Vector3f bary(sf::Vector2i v0, sf::Vector2i v1, sf::Vector2i v2, sf::Vector2i b)
+{
+    sf::Vector3f u = cross(
+        sf::Vector3f(v2.x - v0.x, v1.x - v0.x, v0.x - b.x),
+        sf::Vector3f(v2.y - v0.y, v1.y - v0.y, v0.y - b.y));
+
+    if (std::abs(u.z) < 1)
+        return sf::Vector3f(-1.f, 1.f, 1.f);
+    return sf::Vector3f(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
+}
+
+void plot_triangle(sf::Vector2i v0, sf::Vector2i v1, sf::Vector2i v2, sf::Color color, sf::Image &image)
+{
+    // barycentric method
+    sf::IntRect b = get_triangle_bounds(v0, v1, v2);
+
+    sf::Vector2i p;
+
+    for (p.x = b.left; p.x <= b.width; p.x++)
+    {
+        for (p.y = b.top; p.y <= b.height; p.y++)
+        {
+            sf::Vector3f s = bary(v0, v1, v2, p);
+
+            if (s.x < 0 || s.y < 0 || s.z < 0)
+                continue;
+            image.setPixel(p.y, p.x, color); // TODO: again, flipped :(
+        }
+    }
+}
+
 int main()
 {
     std::cout << "Software Rendering Demos" << std::endl;
@@ -59,6 +109,10 @@ int main()
 
     model = new Model("content/obj/african_head.obj");
 
+    sf::Vector2i t0[3] = {sf::Vector2i(10, 70), sf::Vector2i(50, 160), sf::Vector2i(70, 80)};
+    sf::Vector2i t1[3] = {sf::Vector2i(180, 50), sf::Vector2i(150, 1), sf::Vector2i(70, 180)};
+    sf::Vector2i t2[3] = {sf::Vector2i(180, 150), sf::Vector2i(120, 160), sf::Vector2i(130, 180)};
+
     std::cout << "Loading data: DONE" << std::endl;
 
     std::cout << "Rendering..." << std::endl;
@@ -66,22 +120,39 @@ int main()
     sf::Image image;
     image.create(FRAME_WIDTH, FRAME_HEIGHT, sf::Color::Black);
 
+    // Wireframe
+    // for (int i = 0; i < model->num_faces(); i++)
+    // {
+    //     std::vector< int > face = model->get_face(i);
+
+    //     for (int j = 0; j < 3; j++)
+    //     {
+    //         sf::Vector3f v0 = model->get_vertex(face[j]);
+    //         sf::Vector3f v1 = model->get_vertex(face[(j + 1) % 3]);
+
+    //         int x0 = (v0.x + 1.f) * FRAME_WIDTH / 2.f;
+    //         int y0 = (v0.y + 1.f) * FRAME_HEIGHT / 2.f;
+    //         int x1 = (v1.x + 1.f) * FRAME_WIDTH / 2.f;
+    //         int y1 = (v1.y + 1.f) * FRAME_HEIGHT / 2.f;
+
+    //         plot_line(x0, y0, x1, y1, sf::Color::White, image);
+    //     }
+    // }
+
+    // Flat-shading
     for (int i = 0; i < model->num_faces(); i++)
     {
         std::vector< int > face = model->get_face(i);
+        sf::Vector2i t[3];
 
         for (int j = 0; j < 3; j++)
         {
-            sf::Vector3f v0 = model->get_vertex(face[j]);
-            sf::Vector3f v1 = model->get_vertex(face[(j + 1) % 3]);
-
-            int x0 = (v0.x + 1.f) * FRAME_WIDTH / 2.f;
-            int y0 = (v0.y + 1.f) * FRAME_HEIGHT / 2.f;
-            int x1 = (v1.x + 1.f) * FRAME_WIDTH / 2.f;
-            int y1 = (v1.y + 1.f) * FRAME_HEIGHT / 2.f;
-
-            plot_line(x0, y0, x1, y1, sf::Color::White, image);
+            sf::Vector3f v = model->get_vertex(face[j]);
+            t[j] = sf::Vector2i((v.x + 1.f) * FRAME_WIDTH / 2.f, (v.y + 1.f) * FRAME_HEIGHT / 2.f);
         }
+
+        sf::Color color(rand() % 255, rand() % 255, rand() % 255, 255);
+        plot_triangle(t[0], t[1], t[2], color, image);
     }
 
     delete model;

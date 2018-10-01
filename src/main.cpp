@@ -59,6 +59,7 @@ sf::IntRect get_triangle_bounds(sf::Vector2i v0, sf::Vector2i v1, sf::Vector2i v
     return sf::IntRect(l, t, r + l, b + t);
 }
 
+// vector library
 sf::Vector3f cross(sf::Vector3f a, sf::Vector3f b)
 {
     float x = (a.y * b.z) - (a.z * b.y);
@@ -66,6 +67,26 @@ sf::Vector3f cross(sf::Vector3f a, sf::Vector3f b)
     float z = (a.x * b.y) - (a.y * b.x);
 
     return sf::Vector3f(x, y, z);
+}
+
+float dot(sf::Vector3f a, sf::Vector3f b)
+{
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+float norm(sf::Vector3f &v)
+{
+    return std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+}
+
+sf::Vector3f normalize(sf::Vector3f v)
+{
+    return v * (1.f / norm(v));
+}
+
+void normalized(sf::Vector3f &v)
+{
+    v *= (1.f / norm(v));
 }
 
 sf::Vector3f bary(sf::Vector2i v0, sf::Vector2i v1, sf::Vector2i v2, sf::Vector2i b)
@@ -109,10 +130,6 @@ int main()
 
     model = new Model("content/obj/african_head.obj");
 
-    sf::Vector2i t0[3] = {sf::Vector2i(10, 70), sf::Vector2i(50, 160), sf::Vector2i(70, 80)};
-    sf::Vector2i t1[3] = {sf::Vector2i(180, 50), sf::Vector2i(150, 1), sf::Vector2i(70, 180)};
-    sf::Vector2i t2[3] = {sf::Vector2i(180, 150), sf::Vector2i(120, 160), sf::Vector2i(130, 180)};
-
     std::cout << "Loading data: DONE" << std::endl;
 
     std::cout << "Rendering..." << std::endl;
@@ -140,19 +157,32 @@ int main()
     // }
 
     // Flat-shading
+    sf::Vector3f light(0.f, 0.f, -1.f);
+
     for (int i = 0; i < model->num_faces(); i++)
     {
         std::vector< int > face = model->get_face(i);
-        sf::Vector2i t[3];
-
+        sf::Vector2i screen[3];
+        sf::Vector3f world[3];
+        // for each vertex of the face, get world & screen coords
         for (int j = 0; j < 3; j++)
         {
             sf::Vector3f v = model->get_vertex(face[j]);
-            t[j] = sf::Vector2i((v.x + 1.f) * FRAME_WIDTH / 2.f, (v.y + 1.f) * FRAME_HEIGHT / 2.f);
+            screen[j] = sf::Vector2i((v.x + 1.f) * FRAME_WIDTH / 2.f, (v.y + 1.f) * FRAME_HEIGHT / 2.f);
+            world[j] = v;
         }
 
-        sf::Color color(rand() % 255, rand() % 255, rand() % 255, 255);
-        plot_triangle(t[0], t[1], t[2], color, image);
+        // simple lighting
+        sf::Vector3f n = cross(world[2] - world[0], world[1] - world[0]);
+        normalized(n);
+
+        float intensity = dot(n, light);
+
+        if (intensity > 0)
+        {
+            sf::Color color(intensity * 255, intensity * 255, intensity * 255, 255);
+            plot_triangle(screen[0], screen[1], screen[2], color, image);
+        }
     }
 
     delete model;
